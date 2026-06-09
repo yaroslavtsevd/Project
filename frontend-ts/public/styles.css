@@ -1,0 +1,320 @@
+body {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  background: #f5f5f5;
+  margin: 0;
+  padding: 20px;
+}
+
+.red-star {
+  color: #db372d;
+  font-weight: bold;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+header {
+  margin-bottom: 20px;
+}
+
+.main-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+section {
+  background: #fff;
+  padding: 20px;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+}
+
+.form-section {
+  flex: 1 1 300px;
+}
+
+.table-section {
+  flex: 2 1 600px;
+}
+
+.field {
+  margin-bottom: 12px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.invalid {
+  border-color: #c00 !important;
+}
+
+.error-text {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #c00;
+  min-height: 14px;
+}
+
+.buttons {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  padding: 8px 16px;
+  border: 1px solid #888;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #eef;
+}
+
+button[type="submit"] {
+  background: #4caf50;
+  color: rgb(0, 0, 0);
+  border-color: #388e3c;
+  font-weight: bold;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: left;
+}
+
+th {
+  background: #eee;
+}
+
+.delete-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+}
+
+.edit-btn {
+  background: #ff9800;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+}
+
+/* ── LR4 additions ─────────────────────────────────────────────────────────── */
+
+.subtitle {
+  color: #666;
+  margin: -10px 0 20px;
+  font-size: 0.9rem;
+}
+
+/* ── Status messages ──────────────────────────────────────────────────────── */
+.status-message {
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.status-message:empty { display: none; }
+
+.status-message.loading {
+  background: #e8f4fd;
+  color: #1565c0;
+  border-left: 4px solid #1976d2;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.status-message.empty {
+  background: #f5f5f5;
+  color: #757575;
+  border-left: 4px solid #bdbdbd;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.status-message.error {
+  background: #fdecea;
+  color: #c62828;
+  border-left: 4px solid #e53935;
+}
+.status-message.error .err-msg { font-weight: 500; }
+.status-message.error .err-details {
+  display: block;
+  font-size: 0.8rem;
+  color: #e57373;
+  margin-top: 2px;
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid #90caf9;
+  border-top-color: #1976d2;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Notice (toast) ───────────────────────────────────────────────────────── */
+.notice {
+  padding: 12px 18px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+.notice-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #43a047; }
+.notice-error   { background: #fdecea; color: #c62828; border-left: 4px solid #e53935; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.btn { padding: 7px 14px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.88rem; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary   { background: #1976d2; color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #1565c0; }
+.btn-secondary { background: #e0e0e0; color: #333; }
+.btn-secondary:hover:not(:disabled) { background: #bdbdbd; }
+.btn-danger    { background: #e53935; color: #fff; }
+.btn-danger:hover:not(:disabled)  { background: #c62828; }
+
+/* ── Badges ───────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.badge-public  { background: #e3f2fd; color: #1565c0; }
+.badge-private { background: #fce4ec; color: #880e4f; }
+
+/* ── Poll title/desc in table ─────────────────────────────────────────────── */
+.poll-title { font-size: 0.95rem; }
+.poll-desc  { color: #757575; font-size: 0.8rem; }
+
+.hint { font-size: 0.8rem; color: #9e9e9e; margin-top: 8px; }
+
+/* ── Table actions ────────────────────────────────────────────────────────── */
+.actions { white-space: nowrap; }
+.actions .btn + .btn { margin-left: 4px; }
+
+/* ── Modal ────────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal-box {
+  background: #fff;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 560px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+.modal-header h3 { margin: 0; font-size: 1.1rem; }
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: #757575;
+  line-height: 1;
+}
+.btn-close:hover { color: #333; }
+.modal-body { padding: 16px 20px; }
+
+/* ── Detail grid ──────────────────────────────────────────────────────────── */
+.detail-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 0;
+}
+.detail-grid dt {
+  font-weight: 600;
+  color: #555;
+  white-space: nowrap;
+}
+.detail-grid dd { margin: 0; word-break: break-word; }
+
+/* ── Розширені контролери ── */
+.controls-extended {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* ── Пагінація ── */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pagination {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.page-info {
+  font-size: 0.85rem;
+  color: #666;
+}
+.btn-info {
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+}
+.btn-info:hover {
+  background: #0284c7;
+}

@@ -1,0 +1,13 @@
+{
+  "name": "polls-frontend-ts",
+  "version": "0.4.0",
+  "description": "TypeScript frontend for LR4 Polls",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "serve": "npx http-server public -p 5500"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

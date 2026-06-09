@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- TypeScript скомпільовано в public/js/ через tsc -->
+    <script type="module" src="js/main.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Система опитування групи (Варіант 13)</h1>
+      </header>
+
+      <!-- Глобальне повідомлення (toast) -->
+      <div id="notice" class="notice" style="display:none"></div>
+
+      <main class="main-layout">
+        <!-- ── ФОРМА ── -->
+        <section id="create-section" class="form-section">
+          <h2 id="formTitle">Додати опитування</h2>
+          <form id="pollForm" novalidate>
+            <input type="hidden" id="editId" value="" />
+
+            <div class="field">
+              <label for="titleInput">Назва опитування: <span class="red-star">*</span></label>
+              <input id="titleInput" type="text" placeholder="Вибір теми" minlength="3" maxlength="50" />
+              <p class="error-text" id="titleError"></p>
+            </div>
+
+            <div class="field">
+              <label for="authorInput">Автор: <span class="red-star">*</span></label>
+              <input id="authorInput" type="text" placeholder="ПІБ або e-mail" minlength="2" />
+              <p class="error-text" id="authorError"></p>
+            </div>
+
+            <div class="field">
+              <label for="endDateInput">Дата завершення: <span class="red-star">*</span></label>
+              <input id="endDateInput" type="date" />
+              <p class="error-text" id="endDateError"></p>
+            </div>
+
+            <div class="field">
+              <label for="visibilitySelect">Видимість: <span class="red-star">*</span></label>
+              <select id="visibilitySelect">
+                <option value="">Оберіть видимість</option>
+                <option value="Public">Публічне</option>
+                <option value="Private">Приватне (тільки для групи)</option>
+              </select>
+              <p class="error-text" id="visibilityError"></p>
+            </div>
+
+            <div class="field">
+              <label for="descInput">Опис:</label>
+              <textarea id="descInput" rows="3" placeholder="Короткий опис (до 200 символів)"></textarea>
+              <p class="error-text" id="descError"></p>
+            </div>
+
+            <div class="buttons">
+              <button type="submit" id="submitBtn" class="btn btn-primary">Додати</button>
+              <button type="button" id="resetBtn" class="btn btn-secondary">Очистити</button>
+              <!-- Кнопка скасування активного запиту (AbortController) -->
+              <button type="button" id="cancelBtn" class="btn btn-danger" style="display:none">⏹ Скасувати запит</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- ── СПИСОК ── -->
+        <section id="list-section" class="table-section">
+          <h2>Список опитувань</h2>
+
+          <!-- Розширені фільтри — всі параметри йдуть до API -->
+          <div class="controls controls-extended">
+            <input type="text" id="searchInput" placeholder="🔍 Пошук за назвою/автором" />
+
+            <select id="visibilityFilter">
+              <option value="">Всі типи</option>
+              <option value="Public">Публічні</option>
+              <option value="Private">Приватні</option>
+            </select>
+
+            <select id="sortSelect">
+              <option value="default">Сортування: за замовчуванням</option>
+              <option value="title">За назвою</option>
+              <option value="author">За автором</option>
+              <option value="dateAsc">Дата завершення ↑</option>
+              <option value="dateDesc">Дата завершення ↓</option>
+              <option value="createdAt">Дата створення</option>
+            </select>
+
+            <select id="sortDirSelect">
+              <option value="asc">↑ За зростанням</option>
+              <option value="desc">↓ За спаданням</option>
+            </select>
+
+            <select id="pageSizeSelect">
+              <option value="5">5 на сторінці</option>
+              <option value="10" selected>10 на сторінці</option>
+              <option value="20">20 на сторінці</option>
+            </select>
+          </div>
+
+          <!-- Стан списку -->
+          <div id="listStatus" class="status-message"></div>
+
+          <table id="pollsTable">
+            <thead>
+              <tr>
+                <th>Назва / Опис</th>
+                <th>Автор</th>
+                <th>Дедлайн</th>
+                <th>Видимість</th>
+                <th>Дії</th>
+              </tr>
+            </thead>
+            <tbody id="pollsTableBody"></tbody>
+          </table>
+
+          <!-- Пагінація -->
+          <div class="pagination-bar">
+            <div id="pageInfo" class="page-info"></div>
+            <div id="pagination" class="pagination"></div>
+          </div>
+
+          <p class="hint">Підказка: подвійний клік по рядку або кнопка 🔍 - переглянути деталі.</p>
+        </section>
+      </main>
+    </div>
+
+    <!-- ── МОДАЛЬНЕ ВІКНО ДЕТАЛЕЙ ── -->
+    <div id="detailModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Деталі опитування">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Деталі опитування</h3>
+          <button id="closeDetailBtn" class="btn-close" aria-label="Закрити">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="detailStatus" class="status-message"></div>
+          <div id="detailContent"></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

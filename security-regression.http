@@ -1,0 +1,292 @@
+
+@base = http://localhost:3000
+@user1 = 1
+@user2 = 2
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 0. HEALTH CHECK
+# ══════════════════════════════════════════════════════════════════════════════
+
+### 0.1 Server health
+GET {{base}}/health
+
+# Expected: 200 { "ok": true }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 1. SCENARIO A — SQL INJECTION
+# ══════════════════════════════════════════════════════════════════════════════
+
+### 1.1 Normal search — should return matching polls
+GET {{base}}/api/v1/polls/search?q=семестр
+
+# Expected: 200, data array with ≥1 poll containing "семестр" in title
+
+### 1.2 SQLi attempt via VULNERABLE endpoint: tautology OR '1'='1 — returns ALL rows
+# This is the "before" state — demonstrates the injection works
+GET {{base}}/api/v1/polls/search-vuln?q=%25'%20OR%20'1'%3D'1
+
+# Expected: 200, data: ALL polls (data dump — VULNERABILITY confirmed)
+# The SQL becomes: WHERE title LIKE '%%' OR '1'='1%' — always true
+
+### 1.3 SQLi via VULNERABLE endpoint: single quote → SQL syntax error
+GET {{base}}/api/v1/polls/search-vuln?q='
+
+# Expected: 500 Internal Server Error (SQLite syntax error — VULNERABILITY confirmed)
+
+### 1.4 SQLi FIXED — same tautology via SECURE endpoint: treated as literal text
+GET {{base}}/api/v1/polls/search?q=%25'%20OR%20'1'%3D'1
+
+# Expected: 200, data: [] — NOT a data dump. Parameter is treated as text.
+
+### 1.5 SQLi FIXED — single quote via SECURE endpoint: no crash
+GET {{base}}/api/v1/polls/search?q='
+
+# Expected: 200, data: [] — NOT 500
+
+### 1.6 Normal search — should return matching polls
+GET {{base}}/api/v1/polls/search?q=семестр
+
+# Expected: 200, data array with ≥1 poll containing "семестр"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 2. SCENARIO B — XSS (Stored)
+# ══════════════════════════════════════════════════════════════════════════════
+
+### 2.1 Store XSS payload as comment (normal user auth)
+POST {{base}}/api/v1/polls/1/comments
+X-Demo-UserId: {{user1}}
+Content-Type: application/json
+
+{
+  "body": "<img src=x onerror=\"document.title='XSS'\">"
+}
+
+# Expected: 201, comment stored with body as-is (server does not filter HTML)
+# The XSS fires ONLY when rendered via innerHTML — not when using textContent
+
+### 2.2 Retrieve comments — same data returned regardless of render mode
+GET {{base}}/api/v1/polls/1/comments
+
+# Expected: 200, data includes the stored payload as plain text in JSON
+# JSON itself is safe — danger is in how frontend renders it
+
+### 2.3 Store normal comment — must still work after XSS fix
+POST {{base}}/api/v1/polls/1/comments
+X-Demo-UserId: {{user1}}
+Content-Type: application/json
+
+{
+  "body": "Дуже корисне опитування, дякую!"
+}
+
+# Expected: 201
+
+### 2.4 Body too long — validation rejects
+POST {{base}}/api/v1/polls/1/comments
+X-Demo-UserId: {{user1}}
+Content-Type: application/json
+
+{
+  "body": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+
+# Expected: 400 VALIDATION_ERROR "body too long"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 3. SCENARIO C — IDOR / Broken Access Control
+# ══════════════════════════════════════════════════════════════════════════════
+
+### 3.1 User 1 reads OWN note (id=1) — should succeed
+GET {{base}}/api/v1/notes/1
+X-Demo-UserId: {{user1}}
+
+# Expected: 200, note with ownerUserId=1
+
+### 3.2 User 2 tries to read User 1's note via SECURE endpoint — should FAIL
+GET {{base}}/api/v1/notes/1
+X-Demo-UserId: {{user2}}
+
+# Expected: 404 NOT_FOUND (owner mismatch → treated as not found)
+
+### 3.3 User 2 tries same note via VULNERABLE endpoint — shows the IDOR problem
+GET {{base}}/api/v1/notes-vuln/1
+X-Demo-UserId: {{user2}}
+
+# Expected: 200 — note returned without owner check (VULNERABILITY)
+# This endpoint exists only for Lab 5 PoC demonstration
+
+### 3.4 User 2 reads OWN note (id=3) — should succeed
+GET {{base}}/api/v1/notes/3
+X-Demo-UserId: {{user2}}
+
+# Expected: 200, note with ownerUserId=2
+
+### 3.5 User 2 tries to UPDATE User 1's note — should FAIL
+PUT {{base}}/api/v1/notes/1
+X-Demo-UserId: {{user2}}
+Content-Type: application/json
+
+{
+  "title": "Hijacked title",
+  "content": "Attacker content"
+}
+
+# Expected: 404 NOT_FOUND (owner mismatch)
+
+### 3.6 User 1 updates OWN note — should succeed
+PUT {{base}}/api/v1/notes/1
+X-Demo-UserId: {{user1}}
+Content-Type: application/json
+
+{
+  "title": "Мої нотатки з алгоритмів (оновлено)",
+  "content": "BFS, DFS, Dijkstra, A* — повторити перед іспитом."
+}
+
+# Expected: 200, updated note
+
+### 3.7 User 2 tries to DELETE User 1's note — should FAIL
+DELETE {{base}}/api/v1/notes/1
+X-Demo-UserId: {{user2}}
+
+# Expected: 404 NOT_FOUND
+
+### 3.8 No auth header — should get 401
+GET {{base}}/api/v1/notes/1
+
+# Expected: 401 UNAUTHORIZED
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 4. SCENARIO D — Security Misconfiguration
+# ══════════════════════════════════════════════════════════════════════════════
+
+### 4.1 Check security headers (use curl -I in terminal)
+# curl -I http://localhost:3000/health
+# Expected headers:
+#   X-Content-Type-Options: nosniff
+#   X-Frame-Options: DENY
+#   Referrer-Policy: no-referrer
+#   Content-Security-Policy: default-src 'self'; ...
+
+### 4.2 Trigger a 500 error (non-existent route that causes DB error)
+GET {{base}}/api/v1/polls/999999
+
+# Expected: 404 NOT_FOUND — clean JSON, NO stack trace
+
+### 4.3 Validation error — must return 400 with clean message
+POST {{base}}/api/v1/polls
+X-Demo-UserId: {{user1}}
+Content-Type: application/json
+
+{
+  "title": "",
+  "author": "Test"
+}
+
+# Expected: 400 VALIDATION_ERROR, no internal details leaked
+
+### 4.4 Missing auth — consistent 401 format
+GET {{base}}/api/v1/notes
+
+# Expected: 401 { "error": { "code": "UNAUTHORIZED", "message": "..." } }
+
+### 4.5 CORS — wrong origin should be rejected (test via curl):
+# curl -H "Origin: http://evil.com" http://localhost:3000/api/v1/polls
+# Expected: no Access-Control-Allow-Origin header (or error)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 5. BONUS — Full Authentication
+# ══════════════════════════════════════════════════════════════════════════════
+
+### 5.1 Register new user
+POST {{base}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Тест Користувач",
+  "email": "testuser@example.com",
+  "password": "Secure123!",
+  "role": "Student"
+}
+
+# Expected: 201, { data: { id, name, email, role } }
+
+### 5.2 Login with correct credentials
+POST {{base}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "oksana@example.com",
+  "password": "Password1!"
+}
+
+# Expected: 200, { data: { token: "...", user: { id, name, email, role } } }
+# Copy the token for requests below ↓
+
+### 5.3 Login with WRONG password
+POST {{base}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "oksana@example.com",
+  "password": "wrongpassword"
+}
+
+# Expected: 401 UNAUTHORIZED "Невірні облікові дані"
+# Note: same message regardless of whether user exists (no user enumeration)
+
+### 5.4 Brute force protection — 5 failed attempts trigger rate limit
+# Run this 5 times in a row, 6th attempt should return 429
+POST {{base}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "oksana@example.com",
+  "password": "badpassword"
+}
+
+# Expected after 5 tries: 429 TOO_MANY_REQUESTS
+
+### 5.5 Get current user (Bearer token)
+# Replace TOKEN with value from 5.2 response
+GET {{base}}/api/v1/auth/me
+Authorization: Bearer TOKEN_FROM_LOGIN
+
+# Expected: 200, { data: { userId, role } }
+
+### 5.6 Access notes with Bearer token (full auth mode)
+GET {{base}}/api/v1/notes
+Authorization: Bearer TOKEN_FROM_LOGIN
+
+# Expected: 200, notes belonging to authenticated user
+
+### 5.7 IDOR with full auth — user A cannot read user B's note
+# Login as oksana (user 1), try to access Maria's note (id=3)
+GET {{base}}/api/v1/notes/3
+Authorization: Bearer TOKEN_FROM_LOGIN
+
+# Expected: 404 NOT_FOUND
+
+### 5.8 Logout
+POST {{base}}/api/v1/auth/logout
+Authorization: Bearer TOKEN_FROM_LOGIN
+
+# Expected: 200
+
+### 5.9 Token invalid after logout
+GET {{base}}/api/v1/auth/me
+Authorization: Bearer TOKEN_FROM_LOGIN
+
+# Expected: 401 UNAUTHORIZED "Invalid or expired token"
+
+### 5.10 Duplicate registration
+POST {{base}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Дублікат",
+  "email": "oksana@example.com",
+  "password": "SomePass1!"
+}
+
+# Expected: 409 CONFLICT "Користувач із таким email вже існує"

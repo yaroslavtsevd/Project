@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lab 5 – XSS Демонстрація</title>
+  <style>
+    body { font-family: sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+    h1   { color: #c0392b; }
+    h2   { border-bottom: 2px solid #eee; padding-bottom: .3rem; }
+    .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .box  { border: 2px solid; border-radius: 8px; padding: 1rem; }
+    .vuln { border-color: #e74c3c; background: #fdf0f0; }
+    .safe { border-color: #27ae60; background: #f0fdf4; }
+    .badge { display: inline-block; padding: .2rem .6rem; border-radius: 4px; font-size:.8rem; font-weight:bold; }
+    .badge-vuln { background:#e74c3c; color:#fff; }
+    .badge-safe { background:#27ae60; color:#fff; }
+    textarea, input[type=text] { width:100%; box-sizing:border-box; padding:.5rem; margin:.4rem 0; border:1px solid #ccc; border-radius:4px; }
+    button { padding:.5rem 1.2rem; border:none; border-radius:4px; cursor:pointer; font-size:.95rem; }
+    .btn-vuln { background:#e74c3c; color:#fff; }
+    .btn-safe  { background:#27ae60; color:#fff; }
+    ul.comments { list-style:none; padding:0; margin:.5rem 0; }
+    ul.comments li { background:#fff; border:1px solid #ddd; border-radius:4px; padding:.5rem; margin:.3rem 0; }
+    .auth-box { background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px; padding:1rem; margin-bottom:1.5rem; }
+    .note { font-size:.85rem; color:#555; margin-top:.5rem; }
+    code { background:#f4f4f4; padding:.1rem .3rem; border-radius:3px; font-size:.9rem; }
+    .explanation { background:#fff3cd; border:1px solid #ffc107; border-radius:6px; padding:1rem; margin:1rem 0; }
+  </style>
+</head>
+<body>
+  <h1>🔬 Lab 5 — Сценарій Б: XSS Demonstration</h1>
+
+  <div class="explanation">
+    <strong>Мета:</strong> порівняти <em>вразливий</em> рендер (<code>innerHTML</code>) з
+    <em>безпечним</em> (<code>textContent</code> / DOM API). Введіть XSS-payload у поле нижче
+    і натисніть кнопку потрібного варіанту.
+  </div>
+
+  <!-- Auth section -->
+  <div class="auth-box">
+    <strong>🔑 Автентифікація (для збереження коментарів на сервері)</strong><br>
+    <small>Без логіну — лише локальна демонстрація.</small><br><br>
+    <input type="text"     id="authEmail"    placeholder="email (напр. oksana@example.com)" style="max-width:260px" />
+    <input type="password" id="authPassword" placeholder="пароль"                           style="max-width:180px" />
+    <button onclick="doLogin()" style="background:#3498db;color:#fff;padding:.4rem .9rem;border-radius:4px;border:none;cursor:pointer;">Увійти</button>
+    <span id="authStatus" style="margin-left:.5rem;font-size:.85rem;"></span>
+  </div>
+
+  <!-- Poll ID for server demo -->
+  <label>Poll ID для серверних коментарів:
+    <input type="text" id="pollIdInput" value="1" style="width:60px;" />
+  </label>
+
+  <br><br>
+
+  <!-- XSS payload input -->
+  <label><strong>XSS Payload (введіть рядок):</strong></label>
+  <textarea id="xssInput" rows="3" placeholder='Спробуйте: <img src=x onerror="this.parentNode.textContent=&apos;XSS!&apos;">
+або: <b>жирний текст</b>
+або: звичайний коментар'></textarea>
+
+  <div class="panel">
+    <!-- VULNERABLE -->
+    <div class="box vuln">
+      <h2><span class="badge badge-vuln">ВРАЗЛИВО</span> innerHTML</h2>
+      <p class="note">Дані вставляються через <code>innerHTML</code> → браузер інтерпретує теги як HTML.</p>
+      <button class="btn-vuln" onclick="addVuln()">Додати (вразливо)</button>
+      <button class="btn-vuln" style="margin-left:.5rem;" onclick="addVulnServer()">Зберегти + отримати з сервера (vuln)</button>
+      <ul class="comments" id="vulnList"></ul>
+    </div>
+
+    <!-- SECURE -->
+    <div class="box safe">
+      <h2><span class="badge badge-safe">БЕЗПЕЧНО</span> textContent</h2>
+      <p class="note">Дані вставляються через <code>li.textContent</code> → браузер бачить лише текст.</p>
+      <button class="btn-safe" onclick="addSafe()">Додати (безпечно)</button>
+      <button class="btn-safe" style="margin-left:.5rem;" onclick="addSafeServer()">Зберегти + отримати з сервера (safe)</button>
+      <ul class="comments" id="safeList"></ul>
+    </div>
+  </div>
+
+  <h2>📡 Серверні коментарі (збережений XSS)</h2>
+  <div class="panel">
+    <div class="box vuln">
+      <strong>Вразливий рендер (з БД → innerHTML):</strong>
+      <ul class="comments" id="serverVulnList"></ul>
+      <button class="btn-vuln" onclick="loadServerVuln()">Завантажити (vuln render)</button>
+    </div>
+    <div class="box safe">
+      <strong>Безпечний рендер (з БД → textContent):</strong>
+      <ul class="comments" id="serverSafeList"></ul>
+      <button class="btn-safe" onclick="loadServerSafe()">Завантажити (safe render)</button>
+    </div>
+  </div>
+
+  <script>
+    let sessionToken = sessionStorage.getItem('session_token') ?? null;
+
+    // If already logged in from main page — show status
+    window.addEventListener('load', () => {
+      const user = sessionStorage.getItem('session_user');
+      if (sessionToken && user) {
+        try {
+          const u = JSON.parse(user);
+          document.getElementById('authStatus').textContent = `✅ Вже авторизовано як ${u.name}`;
+          document.getElementById('authStatus').style.color = 'green';
+        } catch {}
+      }
+    });
+
+    async function doLogin() {
+      const email    = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const st       = document.getElementById('authStatus');
+      try {
+        const r = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const j = await r.json();
+        if (r.ok) {
+          sessionToken = j.data.token;
+          sessionStorage.setItem('session_token', sessionToken);
+          sessionStorage.setItem('session_user', JSON.stringify(j.data.user));
+          st.textContent = `✅ Увійшли як ${j.data.user.name}`;
+          st.style.color = 'green';
+        } else {
+          st.textContent = `❌ ${j.error?.message ?? 'Помилка'}`;
+          st.style.color = 'red';
+        }
+      } catch (e) {
+        st.textContent = '❌ Мережева помилка';
+        st.style.color = 'red';
+      }
+    }
+
+    function getPayload() {
+      return document.getElementById('xssInput').value;
+    }
+
+    // ── LOCAL: вразливий рендер через innerHTML ────────────────────────────
+    function addVuln() {
+      const body = getPayload();
+      const ul   = document.getElementById('vulnList');
+      const li   = document.createElement('li');
+      li.innerHTML = body;   // ← XSS тут
+      ul.prepend(li);
+    }
+
+    // ── LOCAL: безпечний рендер через textContent ──────────────────────────
+    function addSafe() {
+      const body = getPayload();
+      const ul   = document.getElementById('safeList');
+      const li   = document.createElement('li');
+      li.textContent = body;  // ← безпечно
+      ul.prepend(li);
+    }
+
+    function getPollId() {
+      return parseInt(document.getElementById('pollIdInput').value) || 1;
+    }
+
+    async function saveComment() {
+      const body   = getPayload();
+      const pollId = getPollId();
+      const headers = { 'Content-Type': 'application/json' };
+      if (sessionToken) headers['Authorization'] = `Bearer ${sessionToken}`;
+      else headers['X-Demo-UserId'] = '1';
+      const r = await fetch(`/api/v1/polls/${pollId}/comments`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ body }),
+      });
+      if (!r.ok) {
+        const j = await r.json();
+        alert('Помилка збереження: ' + (j.error?.message ?? r.status));
+        return false;
+      }
+      return true;
+    }
+
+    async function fetchComments() {
+      const pollId = getPollId();
+      const r = await fetch(`/api/v1/polls/${pollId}/comments`);
+      if (!r.ok) return [];
+      const j = await r.json();
+      return j.data ?? [];
+    }
+
+    // ── SERVER: вразливий рендер (innerHTML) ──────────────────────────────
+    async function addVulnServer() {
+      if (await saveComment()) await loadServerVuln();
+    }
+
+    async function loadServerVuln() {
+      const comments = await fetchComments();
+      const ul = document.getElementById('serverVulnList');
+      ul.innerHTML = '';
+      for (const c of comments) {
+        const li = document.createElement('li');
+        li.innerHTML = c.body;   // ← ВРАЗЛИВО: XSS зі збереженого коментаря
+        ul.appendChild(li);
+      }
+    }
+
+    // ── SERVER: безпечний рендер (textContent) ────────────────────────────
+    async function addSafeServer() {
+      if (await saveComment()) await loadServerSafe();
+    }
+
+    async function loadServerSafe() {
+      const comments = await fetchComments();
+      const ul = document.getElementById('serverSafeList');
+      ul.innerHTML = '';
+      for (const c of comments) {
+        const li = document.createElement('li');
+        // БЕЗПЕЧНО: DOM API — браузер не парсить body як HTML
+        const time = document.createElement('small');
+        time.textContent = new Date(c.createdAt).toLocaleString('uk-UA') + ': ';
+        const text = document.createTextNode(c.body);
+        li.appendChild(time);
+        li.appendChild(text);
+        ul.appendChild(li);
+      }
+    }
+  </script>
+</body>
+</html>

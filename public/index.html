@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Система опитування групи</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="src/main.js"></script>
+  </head>
+  <body>
+    <div class="container">
+
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+      <!-- HEADER                                                             -->
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+      <header class="site-header">
+        <div class="header-top">
+          <h1>Система опитування групи <span class="variant-badge">Варіант 13</span></h1>
+
+          <!-- Панель авторизованого користувача (показується після логіну) -->
+          <div id="userBar" class="user-bar" style="display:none">
+            <span class="user-avatar">👤</span>
+            <span id="userBarName" class="user-name"></span>
+            <span id="userBarRole" class="role-badge"></span>
+            <button id="logoutBtn" class="btn btn-logout">Вийти</button>
+          </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="notice" class="notice" style="display:none"></div>
+      </header>
+
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+      <!-- AUTH PANEL (показується коли НЕ залогінений)                      -->
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+      <section id="authSection" class="auth-section">
+        <div class="auth-tabs">
+          <button id="tabLogin"    class="auth-tab active" data-tab="login">Увійти</button>
+          <button id="tabRegister" class="auth-tab"        data-tab="register">Реєстрація</button>
+        </div>
+
+        <!-- Форма логіну -->
+        <div id="loginPane" class="auth-pane">
+          <div class="auth-fields">
+            <div class="field">
+              <label for="loginEmail">Email</label>
+              <input id="loginEmail" type="email" placeholder="oksana@example.com" autocomplete="username" />
+            </div>
+            <div class="field">
+              <label for="loginPassword">Пароль</label>
+              <div class="pw-wrap">
+                <input id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" />
+                <button type="button" class="pw-toggle" data-target="loginPassword">👁</button>
+              </div>
+            </div>
+          </div>
+          <div class="auth-actions">
+            <button id="loginBtn" class="btn btn-primary">Увійти</button>
+          </div>
+          <p class="auth-hint">
+            Тестові облікові записи:<br>
+            <code>oksana@example.com</code> / <code>Password1!</code><br>
+            <code>maria@example.com</code> / <code>Password2!</code><br>
+            <code>admin@example.com</code> / <code>AdminPass1!</code>
+          </p>
+        </div>
+
+        <!-- Форма реєстрації -->
+        <div id="registerPane" class="auth-pane" style="display:none">
+          <div class="auth-fields">
+            <div class="field">
+              <label for="regName">Ім'я</label>
+              <input id="regName" type="text" placeholder="Ваше ім'я" autocomplete="name" />
+            </div>
+            <div class="field">
+              <label for="regEmail">Email</label>
+              <input id="regEmail" type="email" placeholder="you@example.com" autocomplete="username" />
+            </div>
+            <div class="field">
+              <label for="regPassword">Пароль <span style="font-size:.8rem;color:#888">(мін. 8 символів)</span></label>
+              <div class="pw-wrap">
+                <input id="regPassword" type="password" placeholder="••••••••" autocomplete="new-password" />
+                <button type="button" class="pw-toggle" data-target="regPassword">👁</button>
+              </div>
+            </div>
+          </div>
+          <div class="auth-actions">
+            <button id="registerBtn" class="btn btn-primary">Зареєструватись</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+      <!-- ОСНОВНИЙ КОНТЕНТ (показується після логіну)                       -->
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+      <main id="appMain" class="main-layout" style="display:none">
+
+        <!-- ── ФОРМА ОПИТУВАННЯ ── -->
+        <section id="create-section" class="form-section">
+          <h2 id="formTitle">Додати опитування</h2>
+          <form id="pollForm" novalidate>
+            <input type="hidden" id="editId" value="" />
+
+            <div class="field">
+              <label for="titleInput">Назва: <span class="red-star">*</span></label>
+              <input id="titleInput" type="text" placeholder="Вибір теми" minlength="3" maxlength="50" />
+              <p class="error-text" id="titleError"></p>
+            </div>
+
+            <div class="field">
+              <label for="authorInput">Автор: <span class="red-star">*</span></label>
+              <input id="authorInput" type="text" placeholder="ПІБ або e-mail" minlength="2" />
+              <p class="error-text" id="authorError"></p>
+            </div>
+
+            <div class="field">
+              <label for="endDateInput">Дата завершення: <span class="red-star">*</span></label>
+              <input id="endDateInput" type="date" />
+              <p class="error-text" id="endDateError"></p>
+            </div>
+
+            <div class="field">
+              <label for="visibilitySelect">Видимість: <span class="red-star">*</span></label>
+              <select id="visibilitySelect">
+                <option value="">Оберіть видимість</option>
+                <option value="Public">Публічне</option>
+                <option value="Private">Приватне</option>
+              </select>
+              <p class="error-text" id="visibilityError"></p>
+            </div>
+
+            <div class="field">
+              <label for="descInput">Опис:</label>
+              <textarea id="descInput" rows="3" placeholder="Короткий опис (до 200 символів)"></textarea>
+              <p class="error-text" id="descError"></p>
+            </div>
+
+            <div class="buttons">
+              <button type="submit" id="submitBtn" class="btn btn-primary">Додати</button>
+              <button type="button" id="resetBtn"  class="btn btn-secondary">Очистити</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- ── СПИСОК ОПИТУВАНЬ ── -->
+        <section id="list-section" class="table-section">
+          <h2>Список опитувань</h2>
+          <div class="controls">
+            <input type="text" id="searchInput" placeholder="🔍 Пошук за назвою" />
+            <select id="sortSelect">
+              <option value="default">Сортування: за замовчуванням</option>
+              <option value="dateAsc">Дата завершення ↑</option>
+              <option value="dateDesc">Дата завершення ↓</option>
+            </select>
+          </div>
+          <div id="listStatus" class="status-message"></div>
+          <table id="pollsTable">
+            <thead>
+              <tr>
+                <th>Назва / Опис</th>
+                <th>Автор</th>
+                <th>Дедлайн</th>
+                <th>Видимість</th>
+                <th>Дії</th>
+              </tr>
+            </thead>
+            <tbody id="pollsTableBody"></tbody>
+          </table>
+          <p class="hint">Підказка: подвійний клік по рядку — переглянути деталі.</p>
+        </section>
+      </main>
+
+    </div><!-- /container -->
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- МОДАЛЬНЕ ВІКНО ДЕТАЛЕЙ                                                -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <div id="detailModal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Деталі опитування">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Деталі опитування</h3>
+          <button id="closeDetailBtn" class="btn-close" aria-label="Закрити">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="detailStatus" class="status-message"></div>
+          <div id="detailContent"></div>
+        </div>
+      </div>
+    </div>
+
+  </body>
+</html>
